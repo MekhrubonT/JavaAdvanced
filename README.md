@@ -23,5 +23,5 @@
 
 Исходный код тестов:
 
-* [Простой вариант](java/info/kgeorgiy/java/advanced/walk/WalkTest.java)
-* [Сложный вариант](java/info/kgeorgiy/java/advanced/walk/RecursiveWalkTest.java)
+* [Простой вариант](src/java/info/kgeorgiy/java/advanced/walk/WalkTest.java)
+* [Сложный вариант](src/java/info/kgeorgiy/java/advanced/walk/RecursiveWalkTest.java)
