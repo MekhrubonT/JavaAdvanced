@@ -14,10 +14,14 @@ public class RecursiveWalk {
             try (BufferedReader in = new BufferedReader(new InputStreamReader(fileInputStream, StandardCharsets.UTF_8));
                  PrintWriter out = new PrintWriter(new OutputStreamWriter(fileOutputStream, StandardCharsets.UTF_8))) {
                 new RecursiveWalk().run(in, out);
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
             }
-        } catch (Exception ignored) {
+        } catch (FileNotFoundException e) {
+            System.out.println(e.getMessage());
+        } catch (ArrayIndexOutOfBoundsException e) {
+            System.out.println("Недостаточно аргументов командной строки: " + args.length);
         }
-
     }
 
     private void run(BufferedReader in, PrintWriter out) throws IOException {
