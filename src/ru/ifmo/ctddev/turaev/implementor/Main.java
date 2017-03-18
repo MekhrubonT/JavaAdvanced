@@ -16,10 +16,10 @@ public class Main {
 
 
         Class c = ru.ifmo.ctddev.turaev.implementor.Implementor.class;
-        String path = "test15_encoding\\info.kgeorgiy.java.advanced.implementor.examples.Arabic.jar";
+        String path = "test15_encoding\\info.kgeorgiy.java.advanced.implementor.examples.Arabic.jr";
         new Implementor().implementJar(c, Paths.get(path));
-//        final Path jarFile = Paths.get(path).resolve(c.getName() + ".class");
-//        System.out.println(jarFile);
+        final Path jarFile = Paths.get(path).resolve(c.getName() + ".class");
+        System.out.println(jarFile);
 //        check(getClassLoader(jarFile), c);
 //                Implementor.main(new String[]{"-jar", "javax.management.relation.RelationNotFoundException", "test10_utilityClasses"});
 
