@@ -51,8 +51,9 @@ public class IterativeParallelism implements ListIP {
             final int end = cur + (step < g ? len + 1: len);
             final int position = result.size();
             result.add(null);
-            myThreads.add(new Thread(() -> result.set(position, threadHandle.apply(list.subList(start, end).stream()))));
-            myThreads.get(myThreads.size() - 1).start();
+            Thread thread = new Thread(() -> result.set(position, threadHandle.apply(list.subList(start, end).stream())));
+            thread.start();
+            myThreads.add(thread);
             cur = end;
         }
 
@@ -65,7 +66,7 @@ public class IterativeParallelism implements ListIP {
 
     @Override
     public <T> T maximum(int i, List<? extends T> list, Comparator<? super T> comparator) throws InterruptedException {
-        Function<Stream<? extends T>, T> temp = l -> Collections.max(l.collect(Collectors.toList()), comparator);
+        Function<Stream<? extends T>, T> temp = l -> l.max(comparator).get();
         return baseFunc(min(i, list.size()), list, temp, temp);
     }
 
@@ -76,8 +77,7 @@ public class IterativeParallelism implements ListIP {
 
     @Override
     public <T> boolean all(int i, List<? extends T> list, Predicate<? super T> predicate) throws InterruptedException {
-        return baseFunc(i, list, l -> l.allMatch(predicate),
-                x -> x.allMatch(Boolean::booleanValue));
+        return baseFunc(i, list, l -> l.allMatch(predicate), x -> x.allMatch(Boolean::booleanValue));
     }
 
     @Override
