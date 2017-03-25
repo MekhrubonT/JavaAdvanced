@@ -1,6 +1,7 @@
 package ru.ifmo.ctddev.turaev.concurrent;
 
 import info.kgeorgiy.java.advanced.concurrent.ListIP;
+import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
 
 import java.util.*;
 import java.util.function.Function;
@@ -11,6 +12,13 @@ import java.util.stream.Stream;
 import static java.lang.Integer.min;
 
 public class IterativeParallelism implements ListIP {
+
+    private ParallelMapper mapper = null;
+    public IterativeParallelism() {}
+    public IterativeParallelism(ParallelMapper  mapper) {
+        this.mapper = mapper;
+    }
+
     @Override
     public String join(int i, List<?> list) throws InterruptedException {
         return baseFunc(i, list,
@@ -42,24 +50,32 @@ public class IterativeParallelism implements ListIP {
                               final Function<Stream<? extends T>, R> threadHandle,
                               final Function<? super Stream<R>, R> resultCollector) throws InterruptedException {
 
-        List<R> result = new ArrayList<>();
-        List<Thread> myThreads = new ArrayList<>();
         int len = list.size() / pThreads;
         int g = list.size() % pThreads;
-        for (int cur = 0, step = 0; cur < list.size(); step++) {
-            final int start = cur;
-            final int end = cur + (step < g ? len + 1: len);
-            final int position = result.size();
-            result.add(null);
-            Thread thread = new Thread(() -> result.set(position, threadHandle.apply(list.subList(start, end).stream())));
-            thread.start();
-            myThreads.add(thread);
-            cur = end;
+
+        List<List<? extends T>> temp = new ArrayList<>();
+        for (int cur = 0; cur < list.size(); g--) {
+            int prev = cur;
+            cur += len + (g > 0 ? 1 : 0);
+            temp.add(list.subList(prev, cur));
         }
 
-        for (Thread myThread : myThreads) {
-            myThread.join();
+        List<R> result;
+        if (mapper != null) {
+            result = mapper.map(l -> threadHandle.apply(l.stream()), temp);
+        } else {
+            result = new ArrayList<>();
+            List<Thread> myThreads = new ArrayList<>();
+            for (List<? extends T> sublist : temp) {
+                result.add(null);
+                Thread thread = new Thread(() -> result.set(result.size(), threadHandle.apply(sublist.stream())));thread.start();
+                myThreads.add(thread);
+            }
+            for (Thread myThread : myThreads) {
+                myThread.join();
+            }
         }
+
         return resultCollector.apply(result.stream());
     }
 

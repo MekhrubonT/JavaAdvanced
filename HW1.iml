@@ -48,7 +48,7 @@
     <orderEntry type="module-library" exported="">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/java-advanced-2017/artifacts/IterativeParallelismTest.jar!/" />
+          <root url="jar://$MODULE_DIR$/java-advanced-2017/artifacts/ParallelMapperTest.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
