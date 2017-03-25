@@ -56,7 +56,7 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
     }
 
-    private class ResultCollector<R>  {
+    private class ResultCollector<R> {
         ArrayList<R> data;
         int left;
 

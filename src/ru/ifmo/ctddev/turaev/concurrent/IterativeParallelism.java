@@ -3,7 +3,10 @@ package ru.ifmo.ctddev.turaev.concurrent;
 import info.kgeorgiy.java.advanced.concurrent.ListIP;
 import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -14,35 +17,40 @@ import static java.lang.Integer.min;
 public class IterativeParallelism implements ListIP {
 
     private ParallelMapper mapper = null;
-    public IterativeParallelism() {}
-    public IterativeParallelism(ParallelMapper  mapper) {
+
+    public IterativeParallelism() {
+    }
+
+    public IterativeParallelism(ParallelMapper mapper) {
         this.mapper = mapper;
     }
 
     @Override
-    public String join(int i, List<?> list) throws InterruptedException {
-        return baseFunc(i, list,
-                l -> l.map(Object::toString).collect(Collectors.joining()),
-                l -> l.map(Object::toString).collect(Collectors.joining())
-                );
+    public String join(int threads, List<?> list) throws InterruptedException {
+        return baseFunc(threads, list,
+                inputStream -> inputStream.map(Object::toString).collect(Collectors.joining()),
+                inputStream -> inputStream.map(Object::toString).collect(Collectors.joining())
+        );
     }
 
     @Override
-    public <T> List<T> filter(int i, List<? extends T> list, Predicate<? super T> predicate) throws InterruptedException {
+    public <T> List<T> filter(int threads, List<? extends T> list,
+                              Predicate<? super T> predicate) throws InterruptedException {
         return baseFunc(
-                i,
+                threads,
                 list,
-                l -> l.filter(predicate).collect(Collectors.toList()),
-                l1 -> l1.flatMap(Collection::stream).collect(Collectors.toList())
+                stream -> stream.filter(predicate).collect(Collectors.toList()),
+                stream -> stream.flatMap(Collection::stream).collect(Collectors.toList())
         );
     }
 
 
     @Override
-    public <T, U> List<U> map(int i, List<? extends T> list, Function<? super T, ? extends U> function) throws InterruptedException {
-        return baseFunc(i, list,
-                l -> l.map(function).collect(Collectors.toList()),
-                l -> l.flatMap(Collection::stream).collect(Collectors.toList()));
+    public <T, U> List<U> map(int threads, List<? extends T> list,
+                              Function<? super T, ? extends U> function) throws InterruptedException {
+        return baseFunc(threads, list,
+                stream -> stream.map(function).collect(Collectors.toList()),
+                stream -> stream.flatMap(Collection::stream).collect(Collectors.toList()));
     }
 
 
@@ -52,7 +60,6 @@ public class IterativeParallelism implements ListIP {
 
         int len = list.size() / pThreads;
         int g = list.size() % pThreads;
-
         List<List<? extends T>> temp = new ArrayList<>();
         for (int cur = 0; cur < list.size(); g--) {
             int prev = cur;
@@ -68,7 +75,8 @@ public class IterativeParallelism implements ListIP {
             List<Thread> myThreads = new ArrayList<>();
             for (List<? extends T> sublist : temp) {
                 result.add(null);
-                Thread thread = new Thread(() -> result.set(result.size(), threadHandle.apply(sublist.stream())));thread.start();
+                Thread thread = new Thread(() -> result.set(result.size(), threadHandle.apply(sublist.stream())));
+                thread.start();
                 myThreads.add(thread);
             }
             for (Thread myThread : myThreads) {
@@ -81,24 +89,30 @@ public class IterativeParallelism implements ListIP {
 
 
     @Override
-    public <T> T maximum(int i, List<? extends T> list, Comparator<? super T> comparator) throws InterruptedException {
-        Function<Stream<? extends T>, T> temp = l -> l.max(comparator).get();
-        return baseFunc(min(i, list.size()), list, temp, temp);
+    public <T> T maximum(int threads, List<? extends T> list,
+                         Comparator<? super T> comparator) throws InterruptedException {
+        Function<Stream<? extends T>, T> temp = stream -> stream.max(comparator).get();
+        return baseFunc(min(threads, list.size()), list, temp, temp);
     }
 
     @Override
-    public <T> T minimum(int i, List<? extends T> list, Comparator<? super T> comparator) throws InterruptedException {
-        return maximum(i, list, comparator.reversed());
+    public <T> T minimum(int threads, List<? extends T> list,
+                         Comparator<? super T> comparator) throws InterruptedException {
+        return maximum(threads, list, comparator.reversed());
     }
 
     @Override
-    public <T> boolean all(int i, List<? extends T> list, Predicate<? super T> predicate) throws InterruptedException {
-        return baseFunc(i, list, l -> l.allMatch(predicate), x -> x.allMatch(Boolean::booleanValue));
+    public <T> boolean all(int threads, List<? extends T> list,
+                           Predicate<? super T> predicate) throws InterruptedException {
+        return baseFunc(threads, list,
+                stream -> stream.allMatch(predicate),
+                stream -> stream.allMatch(Boolean::booleanValue));
     }
 
     @Override
-    public <T> boolean any(int i, List<? extends T> list, Predicate<? super T> predicate) throws InterruptedException {
-        return !all(i, list, t -> !predicate.test(t));
+    public <T> boolean any(int threads, List<? extends T> list,
+                           Predicate<? super T> predicate) throws InterruptedException {
+        return !all(threads, list, t -> !predicate.test(t));
     }
 }
 
