@@ -27,10 +27,9 @@ public class IterativeParallelism implements ListIP {
 
     @Override
     public String join(int threads, List<?> list) throws InterruptedException {
-        return baseFunc(threads, list,
-                inputStream -> inputStream.map(Object::toString).collect(Collectors.joining()),
-                inputStream -> inputStream.map(Object::toString).collect(Collectors.joining())
-        );
+        Function<Stream<?>, String> joiner =
+                inputStream -> inputStream.map(Object::toString).collect(Collectors.joining());
+        return baseFunc(threads, list, joiner, joiner);
     }
 
     @Override
@@ -60,22 +59,22 @@ public class IterativeParallelism implements ListIP {
 
         int len = list.size() / pThreads;
         int g = list.size() % pThreads;
-        List<List<? extends T>> temp = new ArrayList<>();
+        List<Stream<? extends T>> temp = new ArrayList<>();
         for (int cur = 0; cur < list.size(); g--) {
             int prev = cur;
             cur += len + (g > 0 ? 1 : 0);
-            temp.add(list.subList(prev, cur));
+            temp.add(list.subList(prev, cur).stream());
         }
 
         List<R> result;
         if (mapper != null) {
-            result = mapper.map(l -> threadHandle.apply(l.stream()), temp);
+            result = mapper.map(threadHandle, temp);
         } else {
             result = new ArrayList<>();
             List<Thread> myThreads = new ArrayList<>();
-            for (List<? extends T> sublist : temp) {
+            for (Stream<? extends T> sublist : temp) {
                 result.add(null);
-                Thread thread = new Thread(() -> result.set(result.size(), threadHandle.apply(sublist.stream())));
+                Thread thread = new Thread(() -> result.set(result.size(), threadHandle.apply(sublist)));
                 thread.start();
                 myThreads.add(thread);
             }

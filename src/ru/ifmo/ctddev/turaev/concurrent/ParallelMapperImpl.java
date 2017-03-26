@@ -2,10 +2,7 @@ package ru.ifmo.ctddev.turaev.concurrent;
 
 import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 import java.util.function.Function;
 
 public class ParallelMapperImpl implements ParallelMapper {
@@ -36,7 +33,8 @@ public class ParallelMapperImpl implements ParallelMapper {
     }
 
     @Override
-    public <T, R> List<R> map(Function<? super T, ? extends R> function, List<? extends T> list) throws InterruptedException {
+    public <T, R> List<R> map(Function<? super T, ? extends R> function,
+                              List<? extends T> list) throws InterruptedException {
         ResultCollector<R> data = new ResultCollector<>(list.size());
         synchronized (order) {
             for (int i = 0; i < list.size(); i++) {
@@ -57,22 +55,21 @@ public class ParallelMapperImpl implements ParallelMapper {
     }
 
     private class ResultCollector<R> {
-        ArrayList<R> data;
+        List<R> data;
         int left;
 
         ResultCollector(int size) {
             left = size;
-            data = new ArrayList<>();
-            for (int i = 0; i < size; i++) {
-                data.add(null);
-            }
+            data = new ArrayList<>(Collections.nCopies(size, null));
         }
 
-        synchronized void setResult(int pos, R res) {
+        void setResult(int pos, R res) {
             data.set(pos, res);
-            left--;
-            if (left == 0) {
-                this.notify();
+            synchronized (this) {
+                left--;
+                if (left == 0) {
+                    this.notify();
+                }
             }
         }
 
