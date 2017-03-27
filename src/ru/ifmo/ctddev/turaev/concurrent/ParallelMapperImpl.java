@@ -4,6 +4,7 @@ import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 public class ParallelMapperImpl implements ParallelMapper {
 
@@ -11,8 +12,8 @@ public class ParallelMapperImpl implements ParallelMapper {
     private final List<Thread> workerThreads = new ArrayList<>();
 
     public ParallelMapperImpl(int threads) {
-        for (int i = 0; i < threads; i++) {
-            Thread t = new Thread(() -> {
+        IntStream.range(0, threads).forEach(ignoredIndex ->
+            Utils.addAndStart(workerThreads, new Thread(() -> {
                 try {
                     while (!Thread.interrupted()) {
                         Runnable fromQueue;
@@ -26,32 +27,27 @@ public class ParallelMapperImpl implements ParallelMapper {
                     }
                 } catch (InterruptedException ignored) {
                 }
-            });
-            t.start();
-            workerThreads.add(t);
-        }
+            })));
     }
 
     @Override
     public <T, R> List<R> map(Function<? super T, ? extends R> function,
                               List<? extends T> list) throws InterruptedException {
         ResultCollector<R> data = new ResultCollector<>(list.size());
-        synchronized (order) {
-            for (int i = 0; i < list.size(); i++) {
-                final int current = i;
-                order.add(() -> data.setResult(current, function.apply(list.get(current))));
-                order.notify();
-            }
-        }
+            IntStream.range(0, list.size()).forEach(current -> {
+                        synchronized (order) {
+                            order.add(() -> data.setResult(current, function.apply(list.get(current))));
+                            order.notify();
+                        }
+                    }
+            );
         return data.getResult();
     }
 
     @Override
     public void close() throws InterruptedException {
         workerThreads.forEach(Thread::interrupt);
-        for (Thread workerThread : workerThreads) {
-            workerThread.join();
-        }
+        Utils.threadJoiner(workerThreads);
     }
 
     private class ResultCollector<R> {
@@ -74,7 +70,7 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
 
         synchronized List<R> getResult() throws InterruptedException {
-            if (left > 0) {
+            while (left > 0) {
                 this.wait();
             }
             return data;

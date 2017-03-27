@@ -3,13 +3,11 @@ package ru.ifmo.ctddev.turaev.concurrent;
 import info.kgeorgiy.java.advanced.concurrent.ListIP;
 import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.lang.Integer.min;
@@ -56,36 +54,27 @@ public class IterativeParallelism implements ListIP {
     private <T, R> R baseFunc(int pThreads, final List<? extends T> list,
                               final Function<Stream<? extends T>, R> threadHandle,
                               final Function<? super Stream<R>, R> resultCollector) throws InterruptedException {
-
         int len = list.size() / pThreads;
         int g = list.size() % pThreads;
-        List<Stream<? extends T>> temp = new ArrayList<>();
+        List<Stream<? extends T>> subStreams = new ArrayList<>();
         for (int cur = 0; cur < list.size(); g--) {
-            int prev = cur;
+            final int prev = cur;
             cur += len + (g > 0 ? 1 : 0);
-            temp.add(list.subList(prev, cur).stream());
+            subStreams.add(list.subList(prev, cur).stream());
         }
 
         List<R> result;
         if (mapper != null) {
-            result = mapper.map(threadHandle, temp);
+            result = mapper.map(threadHandle, subStreams);
         } else {
-            result = new ArrayList<>();
+            result = new ArrayList<>(Collections.nCopies(subStreams.size(), null));
             List<Thread> myThreads = new ArrayList<>();
-            for (Stream<? extends T> sublist : temp) {
-                result.add(null);
-                Thread thread = new Thread(() -> result.set(result.size(), threadHandle.apply(sublist)));
-                thread.start();
-                myThreads.add(thread);
-            }
-            for (Thread myThread : myThreads) {
-                myThread.join();
-            }
+            IntStream.range(0, subStreams.size()).forEach(position -> Utils.addAndStart(myThreads,
+                        new Thread(() -> result.set(position, threadHandle.apply(subStreams.get(position))))));
+            Utils.threadJoiner(myThreads);
         }
-
         return resultCollector.apply(result.stream());
     }
-
 
     @Override
     public <T> T maximum(int threads, List<? extends T> list,
