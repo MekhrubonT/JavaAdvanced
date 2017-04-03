@@ -2,9 +2,12 @@ package ru.ifmo.ctddev.turaev.crawler;
 
 import info.kgeorgiy.java.advanced.crawler.*;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.*;
 
 public class WebCrawler implements Crawler {
@@ -14,53 +17,52 @@ public class WebCrawler implements Crawler {
     private final ExecutorService extractorPool;
     private final LinkHandler handler;
 
-    class Waiter {
-        int unfinishedThreads = 0;
-
-        synchronized void inc() {
-            unfinishedThreads++;
-//            System.out.println("+1\t" + unfinishedThreads);
-        }
-        synchronized void dec() {
-//            System.out.println("-1\t" + (unfinishedThreads - 1));
-            if (--unfinishedThreads == 0) {
-                this.notify();
-            }
-        }
-        synchronized void waitAll() {
-            while (unfinishedThreads != 0) {
-                try {
-                    this.wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost) throws FileNotFoundException {
-        System.out.println(downloaders + " " + extractors + " " + perHost);
+    public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost) {
         downloaderPool = Executors.newFixedThreadPool(downloaders);
         extractorPool = Executors.newFixedThreadPool(extractors);
         handler = new LinkHandler(perHost);
         this.downloader = downloader;
     }
 
+    // url depth downloaders extractors perhost
+    public static void main(String[] args) {
+        try (Crawler crawler = new WebCrawler(new CachingDownloader(),
+                Integer.parseInt(args[2]), Integer.parseInt(args[3]), Integer.parseInt(args[4]))) {
+            crawler.download(args[0], Integer.parseInt(args[1]));
+        } catch (IOException e) {
+            System.out.println("Error while creating instance of CachingDownloader: " + e);
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println("Not enough command line arguments" + e);
+        } catch (NumberFormatException e) {
+            System.out.println("Wrong format of arguments" + e);
+        }
+    }
+
     @Override
     public Result download(String url, int depth) {
-        System.out.println(url + " " + depth);
-        final Waiter waiter = new Waiter();
+        Phaser waiter = new Phaser(1);
         Set<String> downloaded = ConcurrentHashMap.newKeySet();
-        ConcurrentMap<String, IOException> errors = new ConcurrentHashMap<>();
-
+        Map<String, IOException> errors = new ConcurrentHashMap<>();
         myDownload(waiter, downloaded, errors, url, depth);
-
-        waiter.waitAll();
+        waiter.arriveAndAwaitAdvance();
         downloaded.removeAll(errors.keySet());
         return new Result(new ArrayList<>(downloaded), errors);
     }
 
-    private void myDownload(Waiter waiter, Set<String> downloaded,
+    private void errorCatcherWrapper(Phaser waiter, Map<String, IOException> errors, String url, Callable<?> callable) {
+        try {
+            callable.call();
+        } catch (IOException e) {
+            errors.put(url, e);
+        } catch (Exception e) {
+            System.out.println(e.getMessage() + " " + e.getCause());
+            e.printStackTrace();
+        } finally {
+            waiter.arrive();
+        }
+    }
+
+    private void myDownload(Phaser waiter, Set<String> downloaded,
                             Map<String, IOException> errors, String url, int depth) {
         final String host;
         try {
@@ -70,77 +72,74 @@ public class WebCrawler implements Crawler {
             return;
         }
         if (depth >= 1 && downloaded.add(url)) {
-            waiter.inc();
-            handler.add(host, () -> {
-                try {
-                    final Document document = downloader.download(url);
-                    if (depth == 1) {
-                        return;
-                    }
-                    waiter.inc();
-                    extractorPool.submit(() -> {
+            waiter.register();
+            handler.add(host, () -> errorCatcherWrapper(waiter, errors, url,
+                    () -> {
                         try {
-                            document.extractLinks().forEach(s ->
-                                    myDownload(waiter, downloaded, errors, s, depth - 1));
-                        } catch (IOException e) {
-                            errors.put(url, e);
+                            final Document document = downloader.download(url);
+                            if (depth != 1) {
+                                waiter.register();
+                                extractorPool.submit(() -> errorCatcherWrapper(waiter, errors, url,
+                                        () -> {
+                                            document.extractLinks().forEach(s -> myDownload(waiter, downloaded, errors, s, depth - 1));
+                                            return null;
+                                        }));
+                            }
                         } finally {
-                            waiter.dec();
-                            System.out.println("finish");
+                            handler.finish(host);
                         }
-                    });
-                } catch (IOException e) {
-                    errors.put(url, e);
-                } finally {
-                    handler.finish(host);
-                    waiter.dec();
-                    System.out.println("finish");
-                }
-            });
+                        return null;
+                    }));
         }
     }
 
 
     @Override
     public void close() {
-        downloaderPool.shutdownNow();
-        extractorPool.shutdownNow();
+        downloaderPool.shutdown();
+        extractorPool.shutdown();
     }
 
-    class LinkHandler {
-        Map<String, Queue<Runnable>> linksByHost = new ConcurrentHashMap<>();
-        Map<String, Integer> currentlyRan = new ConcurrentHashMap<>();
-        final int maxPerHost;
+    private class LinkHandler {
+        private final int maxPerHost;
+        private final Map<String, Queue<Runnable>> linksByHost = new ConcurrentHashMap<>();
+        private final Map<String, Integer> currentlyRan = new ConcurrentHashMap<>();
 
         LinkHandler(int maxPerHost) {
             this.maxPerHost = maxPerHost;
         }
 
+
         void add(String host, Runnable url) {
             currentlyRan.putIfAbsent(host, 0);
-            if (currentlyRan.get(host) == maxPerHost) {
-                linksByHost.putIfAbsent(host, new LinkedBlockingQueue<>());
-                linksByHost.get(host).add(url);
-            } else {
-                currentlyRan.compute(host, (hostName, num) -> num + 1);
-                downloaderPool.submit(url);
-            }
+            currentlyRan.compute(host, (key, oldVal) -> {
+                    if (oldVal == maxPerHost) {
+                        linksByHost.putIfAbsent(host, new ConcurrentLinkedQueue<>());
+                        linksByHost.get(host).add(url);
+                        return oldVal;
+                    } else {
+                        downloaderPool.submit(url);
+                        return oldVal + 1;
+                    }
+            });
         }
-        void finish(String host) {
-            if (linksByHost.containsKey(host)) {
-                final Queue<Runnable> temp = linksByHost.get(host);
-                synchronized (temp) {
-                    if (!temp.isEmpty()) {
-                        downloaderPool.submit(temp.poll());
-                    }
-                    if (temp.isEmpty()) {
-                        linksByHost.remove(host);
-                    }
-                }
-            } else {
-                currentlyRan.compute(host, (hostName, num) -> num - 1);
-            }
 
+        void finish(String host) {
+            currentlyRan.compute(host, (key, oldVal) -> {
+                    final Queue<Runnable> temp = linksByHost.get(host);
+                    if (temp != null && !temp.isEmpty()) {
+                        downloaderPool.submit(temp.poll());
+                        if (temp.isEmpty()) {
+                            //
+                            linksByHost.remove(host);
+                        }
+                        return oldVal;
+                    } else {
+                        return oldVal - 1;
+                    }
+            });
         }
     }
 }
+
+//java -ea -classpath "D:\java\JavaAdvanced\out\production\JavaAdvanced;D:\java\JavaAdvanced\java-advanced-2017\lib\hamcrest-core-1.3.jar;D:\java\JavaAdvanced\java-advanced-2017\lib\jsoup-1.8.1.jar;D:\java\JavaAdvanced\java-advanced-2017\lib\junit-4.11.jar;D:\java\JavaAdvanced\java-advanced-2017\lib\quickcheck-0.6.jar;D:\java\JavaAdvanced\java-advanced-2017\artifacts\WebCrawlerTest.jar" info.kgeorgiy.java.advanced.crawler.Tester hard ru.ifmo.ctddev.turaev.crawler.WebCrawler
