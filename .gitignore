@@ -1,2 +1,5 @@
 .idea
 out
+*Main.java
+*.iml
+output.txt
