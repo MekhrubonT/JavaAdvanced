@@ -4,6 +4,7 @@ import info.kgeorgiy.java.advanced.concurrent.ListIP;
 import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -80,6 +81,7 @@ public class IterativeParallelism implements ListIP {
     public <T> T maximum(int threads, List<? extends T> list,
                          Comparator<? super T> comparator) throws InterruptedException {
         Function<Stream<? extends T>, T> temp = stream -> stream.max(comparator).get();
+//        System.out.println("threads=" + threads);
         return baseFunc(min(threads, list.size()), list, temp, temp);
     }
 
@@ -110,3 +112,5 @@ public class IterativeParallelism implements ListIP {
 java -ea -classpath "D:\java\JavaAdvanced\out\production\HW1;D:\java\JavaAdvanced\java-advanced-2017\lib\junit-4.11.jar;D:\java\JavaAdvanced\java-advanced-2017\lib\jsoup-1.8.1.jar;D:\java\JavaAdvanced\java-advanced-2017\lib\quickcheck-0.6.jar;D:\java\JavaAdvanced\java-advanced-2017\lib\hamcrest-core-1.3.jar;D:\java\JavaAdvanced\java-advanced-2017\artifacts\IterativeParallelismTest.jar" info.kgeorgiy.java.advanced.concurrent.Tester list ru.ifmo.ctddev.turaev.concurrent.IterativeParallelism
 
  */
+
+//"C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\bin\java" -ea -classpath "C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\ext\cldrdata.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\ext\dnsns.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\ext\jaccess.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\ext\jfxrt.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\ext\localedata.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\ext\nashorn.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\ext\sunec.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\ext\sunjce_provider.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\ext\sunmscapi.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\ext\sunpkcs11.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\ext\zipfs.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\jce.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\jfxswt.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\jsse.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\management-agent.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\resources.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\jre\jre\lib\rt.jar;D:\java\JavaAdvanced\out\production\JavaAdvanced;D:\java\JavaAdvanced\java-advanced-2017\lib\hamcrest-core-1.3.jar;D:\java\JavaAdvanced\java-advanced-2017\lib\jsoup-1.8.1.jar;D:\java\JavaAdvanced\java-advanced-2017\lib\junit-4.11.jar;D:\java\JavaAdvanced\java-advanced-2017\lib\quickcheck-0.6.jar;D:\java\JavaAdvanced\java-advanced-2017\artifacts\ParallelMapperTest.jar;C:\Program Files (x86)\JetBrains\IntelliJ IDEA 2016.3.4\lib\idea_rt.jar" info.kgeorgiy.java.advanced.mapper.Tester list ru.ifmo.ctddev.turaev.concurrent.ParallelMapperImpl,ru.ifmo.ctddev.turaev.concurrent.IterativeParallelism

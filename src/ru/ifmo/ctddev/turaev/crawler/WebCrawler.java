@@ -1,14 +1,13 @@
 package ru.ifmo.ctddev.turaev.crawler;
 
 import info.kgeorgiy.java.advanced.crawler.*;
+import javafx.util.Pair;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class WebCrawler implements Crawler {
 
@@ -102,40 +101,37 @@ public class WebCrawler implements Crawler {
 
     private class LinkHandler {
         private final int maxPerHost;
-        private final Map<String, Queue<Runnable>> linksByHost = new ConcurrentHashMap<>();
-        private final Map<String, Integer> currentlyRan = new ConcurrentHashMap<>();
+        private final Map<String, Pair<Integer, Queue<Runnable>>> currentlyRan = new ConcurrentHashMap<>();
 
         LinkHandler(int maxPerHost) {
             this.maxPerHost = maxPerHost;
         }
 
-
         void add(String host, Runnable url) {
-            currentlyRan.putIfAbsent(host, 0);
+            currentlyRan.putIfAbsent(host, new Pair<>(0, null));
             currentlyRan.compute(host, (key, oldVal) -> {
-                    if (oldVal == maxPerHost) {
-                        linksByHost.putIfAbsent(host, new ConcurrentLinkedQueue<>());
-                        linksByHost.get(host).add(url);
-                        return oldVal;
-                    } else {
-                        downloaderPool.submit(url);
-                        return oldVal + 1;
-                    }
+                if (oldVal.getKey() == maxPerHost) {
+                    Queue<Runnable> q = new ConcurrentLinkedQueue<>(oldVal.getValue() == null ? Collections.emptyList() : oldVal.getValue());
+                    q.add(url);
+                    return new Pair<>(oldVal.getKey(), q);
+                } else {
+                    downloaderPool.submit(url);
+                    return new Pair<>(oldVal.getKey() + 1, oldVal.getValue());
+                }
             });
         }
 
         void finish(String host) {
             currentlyRan.compute(host, (key, oldVal) -> {
-                    final Queue<Runnable> temp = linksByHost.get(host);
-                    if (temp != null && !temp.isEmpty()) {
-                        downloaderPool.submit(temp.poll());
-                        if (temp.isEmpty()) {
-                            //
-                            linksByHost.remove(host);
+                    if (oldVal.getValue() != null) {
+                        Queue<Runnable> q = new ConcurrentLinkedQueue<>(oldVal.getValue() == null ? Collections.emptyList() : oldVal.getValue());
+                        downloaderPool.submit(q.poll());
+                        if (q.isEmpty()) {
+                            q = null;
                         }
-                        return oldVal;
+                        return new Pair<>(oldVal.getKey(), q);
                     } else {
-                        return oldVal - 1;
+                        return new Pair<>(oldVal.getKey() - 1, null);
                     }
             });
         }

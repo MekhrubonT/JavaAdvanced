@@ -1,5 +1,6 @@
 package ru.ifmo.ctddev.turaev.concurrent;
 
+
 import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
 
 import java.util.*;
@@ -26,6 +27,8 @@ public class ParallelMapperImpl implements ParallelMapper {
                         fromQueue.run();
                     }
                 } catch (InterruptedException ignored) {
+                } finally {
+                    Thread.currentThread().interrupt();
                 }
             })));
     }
