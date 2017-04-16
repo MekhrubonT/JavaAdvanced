@@ -124,7 +124,7 @@ public class WebCrawler implements Crawler {
     }
 
     /**
-     * Terminates all threads and stop downloading.
+     * Terminates all threads and stopы downloading.
      */
     @Override
     public void close() {

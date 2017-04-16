@@ -36,6 +36,7 @@ public class ParallelMapperImpl implements ParallelMapper {
     @Override
     public <T, R> List<R> map(Function<? super T, ? extends R> function,
                               List<? extends T> list) throws InterruptedException {
+        System.out.println("mapper " + list.toString());
         ResultCollector<R> data = new ResultCollector<>(list.size());
             IntStream.range(0, list.size()).forEach(current -> {
                         synchronized (order) {
