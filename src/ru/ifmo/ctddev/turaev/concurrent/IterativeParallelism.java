@@ -4,7 +4,6 @@ import info.kgeorgiy.java.advanced.concurrent.ListIP;
 import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
 
 import java.util.*;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -71,7 +70,7 @@ public class IterativeParallelism implements ListIP {
             result = new ArrayList<>(Collections.nCopies(subStreams.size(), null));
             List<Thread> myThreads = new ArrayList<>();
             IntStream.range(0, subStreams.size()).forEach(position -> Utils.addAndStart(myThreads,
-                        new Thread(() -> result.set(position, threadHandle.apply(subStreams.get(position))))));
+                    new Thread(() -> result.set(position, threadHandle.apply(subStreams.get(position))))));
             Utils.threadJoiner(myThreads);
         }
         return resultCollector.apply(result.stream());
@@ -81,6 +80,7 @@ public class IterativeParallelism implements ListIP {
     public <T> T maximum(int threads, List<? extends T> list,
                          Comparator<? super T> comparator) throws InterruptedException {
         Function<Stream<? extends T>, T> temp = stream -> stream.max(comparator).get();
+
 //        System.out.println("threads=" + threads);
         return baseFunc(min(threads, list.size()), list, temp, temp);
     }

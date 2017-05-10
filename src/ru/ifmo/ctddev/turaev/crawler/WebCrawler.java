@@ -10,6 +10,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Predicate;
 
 /**
  * An implementation class for Crawler.
@@ -21,6 +22,7 @@ public class WebCrawler implements Crawler {
     private final ExecutorService downloaderPool;
     private final ExecutorService extractorPool;
     private final LinkHandler handler;
+    private final Predicate<String> urlFilter;
 
     /**
      * Creates parallel Crawler, that uses Downloader downloader to download object
@@ -32,10 +34,15 @@ public class WebCrawler implements Crawler {
      * @param perHost     upper bound of parallel downloadings from the same host simultaneously.
      */
     public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost) {
+        this(downloader, downloaders, extractors, perHost, arg -> true);
+    }
+
+    public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost, Predicate<String> urlFilter) {
         downloaderPool = Executors.newFixedThreadPool(downloaders);
         extractorPool = Executors.newFixedThreadPool(extractors);
         handler = new LinkHandler(perHost);
         this.downloader = downloader;
+        this.urlFilter = urlFilter;
     }
 
     /**
@@ -94,7 +101,7 @@ public class WebCrawler implements Crawler {
 
     private void myDownload(Phaser waiter, Set<String> downloaded,
                             Map<String, IOException> errors, String url, int depth) {
-        if (depth >= 1 && downloaded.add(url)) {
+        if (depth >= 1 && downloaded.add(url) && urlFilter.test(url)) {
             final String host;
             try {
                 host = URLUtils.getHost(url);
@@ -135,6 +142,7 @@ public class WebCrawler implements Crawler {
     private class LinkHandler {
         private final int maxPerHost;
         private final Map<String, HostData> countersAndQueue = new ConcurrentHashMap<>();
+
         LinkHandler(int maxPerHost) {
             this.maxPerHost = maxPerHost;
         }
@@ -178,5 +186,3 @@ public class WebCrawler implements Crawler {
         }
     }
 }
-
-//java -ea -classpath "D:\java\JavaAdvanced\out\production\JavaAdvanced;D:\java\JavaAdvanced\java-advanced-2017\lib\hamcrest-core-1.3.jar;D:\java\JavaAdvanced\java-advanced-2017\lib\jsoup-1.8.1.jar;D:\java\JavaAdvanced\java-advanced-2017\lib\junit-4.11.jar;D:\java\JavaAdvanced\java-advanced-2017\lib\quickcheck-0.6.jar;D:\java\JavaAdvanced\java-advanced-2017\artifacts\WebCrawlerTest.jar" info.kgeorgiy.java.advanced.crawler.Tester hard ru.ifmo.ctddev.turaev.crawler.WebCrawler

@@ -1,6 +1,5 @@
 package ru.ifmo.ctddev.turaev.concurrent;
 
-
 import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
 
 import java.util.*;
@@ -14,37 +13,36 @@ public class ParallelMapperImpl implements ParallelMapper {
 
     public ParallelMapperImpl(int threads) {
         IntStream.range(0, threads).forEach(ignoredIndex ->
-            Utils.addAndStart(workerThreads, new Thread(() -> {
-                try {
-                    while (!Thread.interrupted()) {
-                        Runnable fromQueue;
-                        synchronized (order) {
-                            while (order.isEmpty()) {
-                                order.wait();
+                Utils.addAndStart(workerThreads, new Thread(() -> {
+                    try {
+                        while (!Thread.interrupted()) {
+                            Runnable fromQueue;
+                            synchronized (order) {
+                                while (order.isEmpty()) {
+                                    order.wait();
+                                }
+                                fromQueue = order.remove();
                             }
-                            fromQueue = order.remove();
+                            fromQueue.run();
                         }
-                        fromQueue.run();
+                    } catch (InterruptedException ignored) {
+                    } finally {
+                        Thread.currentThread().interrupt();
                     }
-                } catch (InterruptedException ignored) {
-                } finally {
-                    Thread.currentThread().interrupt();
-                }
-            })));
+                })));
     }
 
     @Override
     public <T, R> List<R> map(Function<? super T, ? extends R> function,
                               List<? extends T> list) throws InterruptedException {
-        System.out.println("mapper " + list.toString());
         ResultCollector<R> data = new ResultCollector<>(list.size());
-            IntStream.range(0, list.size()).forEach(current -> {
-                        synchronized (order) {
-                            order.add(() -> data.setResult(current, function.apply(list.get(current))));
-                            order.notify();
-                        }
+        IntStream.range(0, list.size()).forEach(current -> {
+                    synchronized (order) {
+                        order.add(() -> data.setResult(current, function.apply(list.get(current))));
+                        order.notify();
                     }
-            );
+                }
+        );
         return data.getResult();
     }
 
