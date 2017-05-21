@@ -1,1 +1,1 @@
-javadoc -link https://docs.oracle.com/javase/8/docs/api/ -cp /java-advanced-2017/artifact/WebCrawlerTest.jar -d MyJavaDoc D:\java\JavaAdvanced\src\ru\ifmo\ctddev\turaev\crawler\WebCrawler.java D:\java\JavaAdvanced\src\ru\ifmo\ctddev\turaev\crawler\package-info.java
+javadoc -link https://docs.oracle.com/javase/8/docs/api/ -cp /java-advanced-2017/artifact/HelloUDPTest.jar -d MyJavaDoc src\ru\ifmo\ctddev\turaev\hello\HelloUDPServer.java src\ru\ifmo\ctddev\turaev\hello\HelloUDPClient.java src\ru\ifmo\ctddev\turaev\hello\package-info.java

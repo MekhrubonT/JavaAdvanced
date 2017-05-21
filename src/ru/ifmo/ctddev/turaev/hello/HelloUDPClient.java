@@ -79,7 +79,6 @@ public class HelloUDPClient implements HelloClient {
                     for (int reqNumber = 0; reqNumber < requests; reqNumber++) {
                         String requestStr = requestForm(prefix, index, reqNumber);
                         byte[] requestByteArray = requestStr.getBytes(StandardCharsets.UTF_8);
-                        String expectedResponseString = expectedResponse(prefix, index, reqNumber);
 
                         request.setData(requestByteArray, 0, requestByteArray.length);
 
@@ -87,10 +86,8 @@ public class HelloUDPClient implements HelloClient {
                             try {
                                 socket.send(request);
                                 socket.receive(response);
-//                                System.out.println(new String(request.getData()));
-//                                System.out.println(new String(response.getData()));
                                 String responseStr = new String(response.getData(), response.getOffset(), response.getLength(), Util.CHARSET);
-                                if (isExpectedResponce(requestStr, responseStr)) {
+                                if (isExpectedResponse(requestStr, responseStr)) {
                                     System.out.println(requestStr + ": " + responseStr);
                                     break;
                                 }
@@ -125,7 +122,7 @@ public class HelloUDPClient implements HelloClient {
         }
     }
 
-    private boolean isExpectedResponce(String request, String responseStr) {
+    private boolean isExpectedResponse(String request, String responseStr) {
         for (String s : HELLO_ON_DIFFERENT_LANGUAGES) {
             s = String.format(s, request);
             if (s.equals(responseStr)) {

@@ -1,5 +1,6 @@
 package ru.ifmo.ctddev.turaev.crawler;
 
+
 import info.kgeorgiy.java.advanced.crawler.*;
 
 import java.io.IOException;
@@ -10,7 +11,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Predicate;
 
 /**
  * An implementation class for Crawler.
@@ -22,7 +22,6 @@ public class WebCrawler implements Crawler {
     private final ExecutorService downloaderPool;
     private final ExecutorService extractorPool;
     private final LinkHandler handler;
-    private final Predicate<String> urlFilter;
 
     /**
      * Creates parallel Crawler, that uses Downloader downloader to download object
@@ -34,19 +33,14 @@ public class WebCrawler implements Crawler {
      * @param perHost     upper bound of parallel downloadings from the same host simultaneously.
      */
     public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost) {
-        this(downloader, downloaders, extractors, perHost, arg -> true);
-    }
-
-    public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost, Predicate<String> urlFilter) {
         downloaderPool = Executors.newFixedThreadPool(downloaders);
         extractorPool = Executors.newFixedThreadPool(extractors);
         handler = new LinkHandler(perHost);
         this.downloader = downloader;
-        this.urlFilter = urlFilter;
     }
 
     /**
-     * Creates {@link WebCrawler} and downloads pages and files from given url. Uses CachingDownloader
+     * Creates {@link WebCrawler} and downloads pages and files from given url. Uses FilterCachingDownloader
      * as Downloader object.
      *
      * @param args contains {@link java.net.URL} URL to download from and next integers: maximal depth,
@@ -58,7 +52,7 @@ public class WebCrawler implements Crawler {
                 Integer.parseInt(args[2]), Integer.parseInt(args[3]), Integer.parseInt(args[4]))) {
             crawler.download(args[0], Integer.parseInt(args[1]));
         } catch (IOException e) {
-            System.out.println("Cannot create instance of CachingDownloader: " + e);
+            System.out.println("Cannot create instance of FilterCachingDownloader: " + e);
         } catch (IndexOutOfBoundsException e) {
             System.out.println("Not enough command line arguments" + e);
         } catch (NumberFormatException e) {
@@ -101,7 +95,8 @@ public class WebCrawler implements Crawler {
 
     private void myDownload(Phaser waiter, Set<String> downloaded,
                             Map<String, IOException> errors, String url, int depth) {
-        if (depth >= 1 && downloaded.add(url) && urlFilter.test(url)) {
+        if (depth >= 1 && downloaded.add(url)) {
+//            System.out.println(url + ": " + downloaded.size());
             final String host;
             try {
                 host = URLUtils.getHost(url);
