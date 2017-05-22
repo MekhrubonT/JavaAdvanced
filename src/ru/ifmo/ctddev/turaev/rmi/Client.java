@@ -2,22 +2,27 @@ package ru.ifmo.ctddev.turaev.rmi;
 
 import ru.ifmo.ctddev.turaev.rmi.bank.Account;
 import ru.ifmo.ctddev.turaev.rmi.bank.Bank;
+import ru.ifmo.ctddev.turaev.rmi.person.LocalPersonImpl;
 import ru.ifmo.ctddev.turaev.rmi.person.Person;
 import ru.ifmo.ctddev.turaev.rmi.person.World;
 
 import java.rmi.*;
 import java.net.*;
+import java.util.Random;
 
 import static ru.ifmo.ctddev.turaev.rmi.Server.LOCALHOST_BANK;
-import static ru.ifmo.ctddev.turaev.rmi.Server.MEKHRUBON_WORLD;
+
 
 public class Client {
     public static void main(String[] args) throws RemoteException {
         Bank bank;
         World world;
         try {
-            bank = (Bank) Naming.lookup(LOCALHOST_BANK);
-            world = (World) Naming.lookup(MEKHRUBON_WORLD);
+
+            System.out.println(LOCALHOST_BANK);
+            System.out.println("//localhost/bank");
+            bank = (Bank) Naming.lookup("//localhost/bank");
+            world = (World) Naming.lookup("mekh_world");
         } catch (NotBoundException e) {
             System.out.println("Bank is not bound");
             return;
@@ -25,10 +30,15 @@ public class Client {
             System.out.println("Bank URL is invalid");
             return;
         }
-
         world.tryNewPerson(args[0], args[1], args[2]);
-        Person person = world.getLocalPerson(args[2]);
-
+        Person person;
+        if (new Random().nextBoolean()) {
+            person = world.getLocalPerson(args[2]);
+        } else {
+            person = world.getRemotePerson(args[2]);
+        }
+        System.out.println(person.getId() + " " + person.getSurname() + " " + person.getName());
+        System.out.println(person + " " + person.hashCode());
         Account account;
         try {
              account = bank.getAccount(person, args[3]);

@@ -1,9 +1,11 @@
 package ru.ifmo.ctddev.turaev.rmi.bank;
 
+import ru.ifmo.ctddev.turaev.rmi.person.Person;
+
 import java.rmi.*;
 
 public interface Account extends Remote {
-    public String getPerson()
+    public Person getPerson()
         throws RemoteException;
 
     public int getAmount()

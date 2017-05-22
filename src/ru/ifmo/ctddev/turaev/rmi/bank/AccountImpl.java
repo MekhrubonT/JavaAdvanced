@@ -21,8 +21,8 @@ public class AccountImpl implements Account {
         return (person.hashCode() << 9) ^ accountNumber.hashCode();
     }
 
-    public String getPerson() throws RemoteException {
-        return person.getId();
+    public Person getPerson() throws RemoteException {
+        return person;
     }
 
     public int getAmount() {
@@ -30,7 +30,8 @@ public class AccountImpl implements Account {
     }
 
     public void setAmount(int amount) {
-        System.out.println("Setting amount of money for account " + person);
+        System.out.println(hashCode());
+        System.out.println("Setting amount of money for account " + person + " " + person.hashCode());
         this.amount = amount;
     }
 }
