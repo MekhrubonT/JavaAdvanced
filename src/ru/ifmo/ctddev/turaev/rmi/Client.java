@@ -14,47 +14,35 @@ import static ru.ifmo.ctddev.turaev.rmi.Server.LOCALHOST_BANK;
 
 
 public class Client {
-    public static void main(String[] args) throws RemoteException {
-        Bank bank;
-        World world;
-        try {
 
-            System.out.println(LOCALHOST_BANK);
-            System.out.println("//localhost/bank");
-            bank = (Bank) Naming.lookup("//localhost/bank");
-            world = (World) Naming.lookup("mekh_world");
+    public static final String LOCALHOST_BANK = "//localhost/bank";
+    public static final String MEKH_WORLD = "mekh_world";
+    private final Bank bank;
+    private final World world;
+
+    public Client() throws RemoteException, NotBoundException, MalformedURLException {
+        bank = (Bank) Naming.lookup(LOCALHOST_BANK);
+        world = (World) Naming.lookup(MEKH_WORLD);
+    }
+
+    public static void main(String[] args) throws RemoteException {
+        try {
+            System.out.println("Money: " + new Client().run(args[0], args[1], args[2], args[3], Integer.parseInt(args[4]), PersonType.Local));
         } catch (NotBoundException e) {
             System.out.println("Bank is not bound");
-            return;
         } catch (MalformedURLException e) {
             System.out.println("Bank URL is invalid");
-            return;
         }
-        world.tryNewPerson(args[0], args[1], args[2]);
-        Person person;
-        if (new Random().nextBoolean()) {
-            person = world.getLocalPerson(args[2]);
-        } else {
-            person = world.getRemotePerson(args[2]);
-        }
-        System.out.println(person.getId() + " " + person.getSurname() + " " + person.getName());
-        System.out.println(person + " " + person.hashCode());
-        Account account;
-        try {
-             account = bank.getAccount(person, args[3]);
-        } catch (NullPointerException e) {
-            System.out.println("bank is not working");
-            return;
-        }
+    }
+
+    public int run(String name, String surname, String id, String accountSer, int damount, PersonType type) throws RemoteException, MalformedURLException, NotBoundException {
+        world.tryNewPerson(name, surname, id);
+        Person person = type == PersonType.Local ? world.getLocalPerson(id) : world.getRemotePerson(id);
+        Account account = bank.getAccount(person, accountSer);
         if (account == null) {
-            System.out.println("Creating account");
-            account = bank.createAccount(person, args[3]);
-        } else {
-            System.out.println("Account already exists");
+            account = bank.createAccount(person, accountSer);
         }
-        System.out.println("Money: " + account.getAmount());
-        System.out.println("Adding money");
-        account.setAmount(account.getAmount() + Integer.parseInt(args[4]));
-        System.out.println("Money: " + account.getAmount());
+        account.setAmount(account.getAmount() + damount);
+        return account.getAmount();
     }
 }

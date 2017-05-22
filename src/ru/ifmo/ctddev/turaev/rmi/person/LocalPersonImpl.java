@@ -2,6 +2,7 @@ package ru.ifmo.ctddev.turaev.rmi.person;
 
 import java.io.Serializable;
 import java.rmi.Remote;
+import java.rmi.RemoteException;
 
 /**
  * Created by mekhrubon on 10.05.2017.
@@ -44,6 +45,11 @@ public class LocalPersonImpl implements LocalPerson {
         if (obj == null || !(obj instanceof LocalPersonImpl))
             return false;
         return hashCode() == obj.hashCode() && toString().equals(obj.toString());
+    }
+
+    @Override
+    public String getString() throws RemoteException {
+        return stringValue;
     }
 
     @Override

@@ -35,6 +35,11 @@ public class RemotePersonImpl extends UnicastRemoteObject implements RemotePerso
     }
 
     @Override
+    public String getString() throws RemoteException {
+        return stringValue;
+    }
+
+    @Override
     public String toString() {
         return stringValue;
     }

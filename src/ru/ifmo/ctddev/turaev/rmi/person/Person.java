@@ -11,4 +11,6 @@ public interface Person {
     public String getId() throws RemoteException;
 
     public String getName() throws RemoteException;
+
+    String getString() throws RemoteException;
 }

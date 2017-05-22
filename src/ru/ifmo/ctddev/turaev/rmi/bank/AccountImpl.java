@@ -30,8 +30,6 @@ public class AccountImpl implements Account {
     }
 
     public void setAmount(int amount) {
-        System.out.println(hashCode());
-        System.out.println("Setting amount of money for account " + person + " " + person.hashCode());
         this.amount = amount;
     }
 }

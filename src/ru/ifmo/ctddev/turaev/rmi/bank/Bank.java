@@ -1,6 +1,5 @@
 package ru.ifmo.ctddev.turaev.rmi.bank;
 
-import ru.ifmo.ctddev.turaev.rmi.bank.Account;
 import ru.ifmo.ctddev.turaev.rmi.person.Person;
 
 import java.rmi.*;
